@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Science Diagram Maker</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1c2430; --muted:#667085; --line:#e3e6eb; --ok:#127a3d; --okbg:#e3f5ea; --bad:#b42318; --badbg:#fde8e6; --accent:#2f5bea; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  header, main { max-width:1200px; margin:0 auto; padding:0 16px; }
+  header { padding-top:24px; }
+  h1 { margin:0 0 4px; font-size:24px; }
+  .sub { color:var(--muted); margin:0 0 16px; }
+  .wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:10px; }
+  table { border-collapse:collapse; width:100%; min-width:900px; }
+  th, td { padding:12px; border-bottom:1px solid var(--line); vertical-align:top; text-align:left; }
+  th { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); background:#fafbfc; }
+  tr:last-child td { border-bottom:0; }
+  .diagram { width:340px; }
+  .diagram img { width:340px; height:212px; border:1px solid var(--line); border-radius:6px; background:#fff; display:block; }
+  .empty { width:340px; height:212px; display:grid; place-items:center; color:var(--muted); border:1px dashed var(--line); border-radius:6px; text-align:center; padding:8px; }
+  .name { font-weight:600; }
+  .small { color:var(--muted); font-size:13px; }
+  ul.checks { list-style:none; margin:0; padding:0; min-width:200px; }
+  ul.checks li { margin-bottom:4px; font-size:13px; }
+  .pill { display:inline-block; min-width:42px; text-align:center; padding:1px 8px; border-radius:99px; font-size:12px; font-weight:700; margin-right:6px; }
+  .pill.pass { background:var(--okbg); color:var(--ok); }
+  .pill.fail { background:var(--badbg); color:var(--bad); }
+  .msg { color:var(--muted); display:block; margin-left:0; font-size:12px; }
+  .review { min-width:230px; }
+  .btns { display:flex; gap:6px; margin-bottom:6px; }
+  button { font:inherit; border:1px solid var(--line); background:#fff; border-radius:6px; padding:5px 12px; cursor:pointer; }
+  button:hover { background:#f2f4f7; }
+  button:disabled { opacity:.6; cursor:wait; }
+  button.approve.on { background:var(--ok); border-color:var(--ok); color:#fff; }
+  button.reject.on { background:var(--bad); border-color:var(--bad); color:#fff; }
+  button.gen { background:var(--accent); border-color:var(--accent); color:#fff; margin-top:8px; }
+  button.gen:hover { background:#2449c0; }
+  textarea { width:100%; height:60px; font:inherit; font-size:13px; padding:6px; border:1px solid var(--line); border-radius:6px; resize:vertical; }
+  .status { font-size:12px; margin-top:4px; color:var(--muted); }
+  .error { margin-top:8px; padding:8px 10px; background:var(--badbg); color:var(--bad); border-radius:6px; font-size:13px; }
+  .live { font-size:12px; color:var(--accent); font-weight:600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Science Diagram Maker</h1>
+  <p class="sub">5 AI-made animated diagrams, checked by code. Review each one below. Your Approve/Reject choices and notes are saved in this browser.</p>
+</header>
+<main>
+  <div class="wrap">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Concept</th><th>Diagram</th><th>Checks</th><th>Cost &amp; retries</th><th>Review</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const CHECK_LABELS = {
+  parses: 'Valid SVG',
+  inside_viewbox: 'Inside viewBox',
+  title_and_labels: 'Title + 3 labels',
+  has_animation: 'Animated',
+  safe_content: 'Safe content (own check)',
+};
+const CONCEPTS = [
+  { id: 1, concept: "Pythagoras' theorem", subject: 'Maths' },
+  { id: 2, concept: 'Parts of a circle', subject: 'Maths' },
+  { id: 3, concept: 'Series circuit', subject: 'Physics' },
+  { id: 4, concept: 'Photosynthesis', subject: 'Biology' },
+  { id: 5, concept: 'States of matter', subject: 'Chemistry' },
+];
+
+// ---- Review storage: browser localStorage (see README for why) ----
+const KEY = 'diagram-reviews-v1';
+function loadReviews() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
+}
+function saveReview(id, patch) {
+  const all = loadReviews();
+  all[id] = { ...(all[id] || {}), ...patch };
+  try { localStorage.setItem(KEY, JSON.stringify(all)); return true; } catch { return false; }
+}
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+// <img> shows the SVG with its animation but never runs scripts inside it.
+const svgSrc = (svg) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+
+let results = {};   // id -> result (saved or live)
+let live = {};      // id -> true when the row shows a live-generated result
+let errors = {};    // id -> error text
+let busy = {};      // id -> true while generating
+
+function rowHtml(c) {
+  const r = results[c.id];
+  const rev = loadReviews()[c.id] || {};
+  const diagram = r && r.svg
+    ? `<img alt="${esc(c.concept)} diagram" src="${svgSrc(r.svg)}">`
+    : `<div class="empty">No saved result yet.<br>Press Generate.</div>`;
+  const checks = r
+    ? `<ul class="checks">${r.checks.map((k) =>
+        `<li><span class="pill ${k.passed ? 'pass' : 'fail'}">${k.passed ? 'PASS' : 'FAIL'}</span>${esc(CHECK_LABELS[k.name] || k.name)}${k.passed ? '' : `<span class="msg">${esc(k.message)}</span>`}</li>`).join('')}</ul>`
+    : '<span class="small">—</span>';
+  const cost = r
+    ? `<div><b>$${Number(r.costUsd).toFixed(5)}</b> est.</div>
+       <div>Retries: <b>${r.retries}</b></div>
+       <div class="small">API retries: ${r.apiRetries}</div>
+       <div class="small">Tokens in/out: ${r.inputTokens} / ${r.outputTokens}</div>
+       <div class="small">${esc(r.model)}</div>
+       ${live[c.id] ? '<div class="live">Live result (not saved to results.json)</div>' : ''}`
+    : '<span class="small">—</span>';
+  return `
+    <td>${c.id}</td>
+    <td><div class="name">${esc(c.concept)}</div><div class="small">${esc(c.subject)}</div>
+      <button class="gen" data-gen="${c.id}" ${busy[c.id] ? 'disabled' : ''}>${busy[c.id] ? 'Generating… (up to 1 min)' : 'Generate'}</button>
+      ${errors[c.id] ? `<div class="error"><b>Could not generate:</b> ${esc(errors[c.id])}</div>` : ''}</td>
+    <td class="diagram">${diagram}</td>
+    <td>${checks}</td>
+    <td>${cost}</td>
+    <td class="review">
+      <div class="btns">
+        <button class="approve ${rev.decision === 'approved' ? 'on' : ''}" data-decide="${c.id}:approved">Approve</button>
+        <button class="reject ${rev.decision === 'rejected' ? 'on' : ''}" data-decide="${c.id}:rejected">Reject</button>
+      </div>
+      <textarea data-note="${c.id}" placeholder="Note (saved automatically)">${esc(rev.note || '')}</textarea>
+      <div class="status" id="status-${c.id}">${rev.decision ? 'Saved: ' + rev.decision : 'Not reviewed yet'}</div>
+    </td>`;
+}
+
+function renderRow(id) {
+  const c = CONCEPTS.find((x) => x.id === id);
+  let tr = document.getElementById('row-' + id);
+  if (!tr) { tr = document.createElement('tr'); tr.id = 'row-' + id; document.getElementById('rows').appendChild(tr); }
+  tr.innerHTML = rowHtml(c);
+}
+
+async function load() {
+  CONCEPTS.forEach((c) => renderRow(c.id));
+  try {
+    const res = await fetch('/api/results');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    for (const r of await res.json()) results[r.id] = r;
+  } catch (e) {
+    document.querySelector('.sub').insertAdjacentHTML('afterend', `<div class="error">Could not load saved results: ${esc(e.message)}</div>`);
+  }
+  CONCEPTS.forEach((c) => renderRow(c.id));
+}
+
+async function generate(id) {
+  busy[id] = true; errors[id] = '';
+  renderRow(id);
+  try {
+    const res = await fetch('/api/generate/' + id, { method: 'POST' });
+    let data = null;
+    try { data = await res.json(); } catch { /* not JSON */ }
+    if (!res.ok) throw new Error((data && data.error) || `The server answered with an error (HTTP ${res.status}).`);
+    results[id] = data; live[id] = true;
+  } catch (e) {
+    errors[id] = e.message || 'Network error. Check your connection and try again.';
+  } finally {
+    busy[id] = false;
+    renderRow(id);
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const g = e.target.closest('[data-gen]');
+  if (g) return generate(Number(g.dataset.gen));
+  const d = e.target.closest('[data-decide]');
+  if (d) {
+    const [id, decision] = d.dataset.decide.split(':');
+    const note = document.querySelector(`[data-note="${id}"]`).value;
+    const ok = saveReview(id, { decision, note });
+    renderRow(Number(id));
+    if (!ok) document.getElementById('status-' + id).textContent = 'Could not save (browser storage is blocked).';
+  }
+});
+document.addEventListener('change', (e) => {
+  const n = e.target.closest('[data-note]');
+  if (!n) return;
+  saveReview(n.dataset.note, { note: n.value });
+  const s = document.getElementById('status-' + n.dataset.note);
+  const rev = loadReviews()[n.dataset.note];
+  s.textContent = 'Note saved' + (rev && rev.decision ? ' · ' + rev.decision : '');
+});
+
+load();
+</script>
+</body>
+</html>
