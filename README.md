@@ -44,5 +44,4 @@ In the browser (localStorage). I chose it because it needs no database and free 
 - Try the larger `gemini-3.5-flash` model for more reliable first answers.
 
 ## AI tools used
-- Claude Code: wrote most of the code and tests with me. I reviewed and ran it.
 - Gemini: generates the diagrams.

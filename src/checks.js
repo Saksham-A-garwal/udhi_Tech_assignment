@@ -1,4 +1,3 @@
-// Code checks for a model-made SVG. Each check returns { name, passed, message }.
 import { DOMParser } from '@xmldom/xmldom';
 
 export const CHECK_NAMES = [
@@ -6,13 +5,13 @@ export const CHECK_NAMES = [
   'inside_viewbox',
   'title_and_labels',
   'has_animation',
-  'safe_content', // our own extra check
+  'safe_content',
 ];
 
-const TOLERANCE = 1; // allow 1 unit of rounding error
+const TOLERANCE = 1;
 const SKIP_TAGS = new Set(['defs', 'clipPath', 'mask', 'marker', 'pattern', 'symbol', 'style', 'title', 'desc']);
 
-// ---------- helpers ----------
+
 function elementChildren(node) {
   return Array.from(node.childNodes || []).filter((n) => n.nodeType === 1);
 }
@@ -35,7 +34,7 @@ function num(el, attr, fallback = 0) {
   return Number.isFinite(v) ? v : fallback;
 }
 
-// ---------- check 1: parse ----------
+
 export function parseSvg(svg) {
   const errors = [];
   const parser = new DOMParser({
@@ -55,14 +54,14 @@ export function parseSvg(svg) {
   return { doc, root, error: null };
 }
 
-// ---------- check 2: viewBox ----------
+
 function getViewBox(root) {
   const vb = nums(root.getAttribute('viewBox'));
   if (vb.length === 4 && vb[2] > 0 && vb[3] > 0) return { x: vb[0], y: vb[1], w: vb[2], h: vb[3] };
   return null;
 }
 
-// Transforms: we understand translate() and scale(). Anything else => null (can't verify).
+
 function composeTransform(parent, attr) {
   if (!attr) return parent;
   let t = parent;
@@ -74,7 +73,7 @@ function composeTransform(parent, attr) {
     if (m[1] === 'translate') c = { sx: 1, sy: 1, tx: a[0] || 0, ty: a[1] || 0 };
     else if (m[1] === 'scale') c = { sx: a[0] ?? 1, sy: a[1] ?? a[0] ?? 1, tx: 0, ty: 0 };
     else return null;
-    // parent(child(p))
+
     t = { sx: t.sx * c.sx, sy: t.sy * c.sy, tx: t.sx * c.tx + t.tx, ty: t.sy * c.ty + t.ty };
   }
   return t;
@@ -100,7 +99,7 @@ function pathPoints(d) {
       if (lower === 'h') x = rel ? x + p[0] : p[0];
       else if (lower === 'v') y = rel ? y + p[0] : p[0];
       else {
-        // the last two numbers are always the end point (for arcs too)
+
         const ex = p[n - 2], ey = p[n - 1];
         x = rel ? x + ex : ex;
         y = rel ? y + ey : ey;
@@ -112,8 +111,7 @@ function pathPoints(d) {
   return pts;
 }
 
-// Simple CSS support: read ".class { prop: value }" rules from <style> so that
-// font-size and text-anchor set by a class are respected (a browser would apply them).
+
 let cssClassRules = {};
 function readCssRules(root) {
   cssClassRules = {};
@@ -129,7 +127,7 @@ function readCssRules(root) {
   });
 }
 
-// Look up a property on an element: attribute, inline style, then its CSS classes.
+
 function styleProp(n, prop) {
   const a = n.getAttribute(prop);
   if (a) return a.trim();
@@ -159,7 +157,7 @@ function anchorOf(el) {
   return 'start';
 }
 
-// Returns a list of [x, y] points (already transformed) that the element draws.
+
 function elementPoints(el, tag) {
   switch (tag) {
     case 'rect': {
@@ -189,7 +187,7 @@ function elementPoints(el, tag) {
       const text = (el.textContent || '').trim();
       if (!text || !el.getAttribute('x') || !el.getAttribute('y')) return [];
       const x = num(el, 'x'), y = num(el, 'y'), fs = fontSizeOf(el);
-      const w = text.length * fs * 0.5; // rough width guess
+      const w = text.length * fs * 0.5;
       const anchor = anchorOf(el);
       const x0 = anchor === 'middle' ? x - w / 2 : anchor === 'end' ? x - w : x;
       return [[x0, y - fs], [x0 + w, y + fs * 0.25]];
@@ -209,9 +207,9 @@ export function checkViewBox(root) {
   const visit = (el, t) => {
     const tag = tagOf(el);
     if (SKIP_TAGS.has(tag)) return;
-    if (elementChildren(el).some((c) => tagOf(c) === 'animateMotion')) { skipped++; return; } // position comes from the motion path
+    if (elementChildren(el).some((c) => tagOf(c) === 'animateMotion')) { skipped++; return; }
     const nt = composeTransform(t, el.getAttribute('transform'));
-    if (nt === null) { skipped++; return; } // unsupported transform: cannot verify this subtree
+    if (nt === null) { skipped++; return; }
     for (const [px, py] of elementPoints(el, tag)) {
       const X = px * nt.sx + nt.tx, Y = py * nt.sy + nt.ty;
       if (X < vb.x - TOLERANCE || X > vb.x + vb.w + TOLERANCE || Y < vb.y - TOLERANCE || Y > vb.y + vb.h + TOLERANCE) {
@@ -233,7 +231,7 @@ export function checkViewBox(root) {
   return { passed: true, message: `All drawn elements are inside the viewBox${skipped ? ` (${skipped} rotated/matrix group(s) not verifiable)` : ''}.` };
 }
 
-// ---------- check 3: title + labels ----------
+
 export function checkTitleAndLabels(root) {
   const title = elementChildren(root).find((c) => tagOf(c) === 'title');
   const hasTitle = !!title && title.textContent.trim().length > 0;
@@ -249,7 +247,7 @@ export function checkTitleAndLabels(root) {
     : { passed: true, message: `Has a title and ${labels} text labels.` };
 }
 
-// ---------- check 4: animation ----------
+
 export function checkAnimation(root) {
   let smil = 0;
   let css = false;
@@ -263,8 +261,7 @@ export function checkAnimation(root) {
     : { passed: false, message: 'No animation found. Add SMIL (<animate>, <animateTransform>, <animateMotion>) or CSS @keyframes.' };
 }
 
-// ---------- check 5 (our own): safe content ----------
-// Model output is untrusted. The page must never run code or load things from other sites.
+
 export function checkSafeContent(root) {
   const problems = [];
   walk(root, (el) => {
@@ -284,7 +281,7 @@ export function checkSafeContent(root) {
     : { passed: true, message: 'No scripts, event handlers or external links.' };
 }
 
-// ---------- run everything ----------
+
 export function runChecks(svg) {
   const parsed = parseSvg(svg);
   if (parsed.error) {

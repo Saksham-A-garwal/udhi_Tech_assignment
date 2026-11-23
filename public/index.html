@@ -15,17 +15,10 @@
   }
   * { box-sizing: border-box; }
   body { margin:0; font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
-  .hero { background:linear-gradient(135deg,#312e81,#4f46e5 60%,#0ea5e9); color:#fff; }
   .inner { max-width:1400px; margin:0 auto; padding:0 20px; }
-  .hero .inner { padding-top:32px; padding-bottom:64px; }
-  .brand { font-size:12px; letter-spacing:.14em; text-transform:uppercase; opacity:.8; font-weight:600; }
-  h1 { margin:6px 0 8px; font-size:30px; letter-spacing:-.02em; }
-  .sub { margin:0; max-width:720px; opacity:.9; font-size:15px; }
-  main.inner { margin-top:-40px; padding-bottom:40px; position:relative; }
-  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
-  .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow); }
-  .stat .v { font-size:24px; font-weight:700; letter-spacing:-.02em; }
-  .stat .l { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+  h1 { margin:0 0 6px; font-size:28px; letter-spacing:-.02em; }
+  .sub { margin:0 0 20px; max-width:720px; color:var(--muted); font-size:15px; }
+  main.inner { padding-top:32px; padding-bottom:40px; }
   .wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); }
   table { border-collapse:collapse; width:100%; min-width:1100px; }
   th, td { padding:14px; border-bottom:1px solid var(--line); vertical-align:top; text-align:left; }
@@ -65,17 +58,13 @@
   .status.rejected { color:var(--bad); font-weight:600; }
   .error { margin-top:10px; padding:8px 10px; background:var(--badbg); color:var(--bad); border-radius:8px; font-size:13px; }
   .live { display:inline-block; margin-top:6px; font-size:11px; color:var(--accent2); font-weight:700; background:var(--soft); border:1px solid var(--line); padding:1px 8px; border-radius:99px; }
-  @media (max-width:700px) { .stats { grid-template-columns:repeat(2,1fr); } h1 { font-size:24px; } }
+  @media (max-width:700px) { h1 { font-size:24px; } }
 </style>
 </head>
 <body>
-<div class="hero"><div class="inner">
-  <div class="brand">Udhi Technologies · Review tool</div>
-  <h1>Science Diagram Maker</h1>
-  <p class="sub">Five AI-made animated science diagrams, each checked by code. Review them below. Approve/Reject choices and notes are saved in this browser.</p>
-</div></div>
 <main class="inner">
-  <div class="stats" id="stats"></div>
+  <h1>Science Diagram Maker</h1>
+  <p class="sub">Five AI-made animated science diagrams, each checked by code. Approve/Reject choices and notes are saved in this browser.</p>
   <div id="banner"></div>
   <div class="wrap">
     <table>
@@ -87,8 +76,7 @@
   </div>
 </main>
 
-<script>
-const CHECK_LABELS = {
+<script>const CHECK_LABELS = {
   parses: 'Valid SVG',
   inside_viewbox: 'Inside viewBox',
   title_and_labels: 'Title + 3 labels',
@@ -103,7 +91,6 @@ const CONCEPTS = [
   { id: 5, concept: 'States of matter', subject: 'Chemistry' },
 ];
 
-// ---- Review storage: browser localStorage (see README for why) ----
 const KEY = 'diagram-reviews-v1';
 function loadReviews() {
   try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
@@ -115,13 +102,13 @@ function saveReview(id, patch) {
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-// <img> shows the SVG with its animation but never runs scripts inside it.
+
 const svgSrc = (svg) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 
-let results = {};   // id -> result (saved or live)
-let live = {};      // id -> true when the row shows a live-generated result
-let errors = {};    // id -> error text
-let busy = {};      // id -> true while generating
+let results = {};
+let live = {};
+let errors = {};
+let busy = {};
 
 function rowHtml(c) {
   const r = results[c.id];
@@ -159,25 +146,11 @@ function rowHtml(c) {
     </td>`;
 }
 
-function renderStats() {
-  const rs = Object.values(results);
-  const revs = loadReviews();
-  const passed = rs.filter((r) => r.checks.every((k) => k.passed)).length;
-  const cost = rs.reduce((t, r) => t + Number(r.costUsd), 0);
-  const retries = rs.reduce((t, r) => t + r.retries, 0);
-  const reviewed = CONCEPTS.filter((c) => revs[c.id] && revs[c.id].decision).length;
-  const tile = (v, l) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`;
-  document.getElementById('stats').innerHTML =
-    tile(`${passed}/${CONCEPTS.length}`, 'Pass all checks') + tile('$' + cost.toFixed(4), 'Total est. cost') +
-    tile(retries, 'Check retries') + tile(`${reviewed}/${CONCEPTS.length}`, 'Reviewed');
-}
-
 function renderRow(id) {
   const c = CONCEPTS.find((x) => x.id === id);
   let tr = document.getElementById('row-' + id);
   if (!tr) { tr = document.createElement('tr'); tr.id = 'row-' + id; document.getElementById('rows').appendChild(tr); }
   tr.innerHTML = rowHtml(c);
-  renderStats();
 }
 
 async function load() {
@@ -198,7 +171,7 @@ async function generate(id) {
   try {
     const res = await fetch('/api/generate/' + id, { method: 'POST' });
     let data = null;
-    try { data = await res.json(); } catch { /* not JSON */ }
+    try { data = await res.json(); } catch { }
     if (!res.ok) throw new Error((data && data.error) || `The server answered with an error (HTTP ${res.status}).`);
     results[id] = data; live[id] = true;
   } catch (e) {

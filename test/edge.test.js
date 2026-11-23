@@ -1,4 +1,3 @@
-// Edge cases for the checks, the retry flow and the Gemini client.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runChecks } from '../src/checks.js';
@@ -12,7 +11,6 @@ const labels = '<text x="10" y="20">a</text><text x="10" y="40">b</text><text x=
 const anim = '<circle cx="50" cy="50" r="5"><animate attributeName="r" values="5;9;5" dur="1s"/></circle>';
 const get = (svg, name) => runChecks(svg).find((c) => c.name === name);
 
-// ---------- parse ----------
 test('empty string and plain text do not parse', () => {
   assert.equal(get('', 'parses').passed, false);
   assert.equal(get('hello world', 'parses').passed, false);
@@ -24,7 +22,6 @@ test('duplicated attribute (a real model error) fails to parse', () => {
   assert.equal(get(wrap('<g transform="a" transform="b"/>'), 'parses').passed, false);
 });
 
-// ---------- viewBox ----------
 test('shape exactly on the edge passes; 3 units outside fails', () => {
   assert.equal(get(wrap('<rect x="0" y="0" width="800" height="500"/>'), 'inside_viewbox').passed, true);
   assert.equal(get(wrap('<rect x="0" y="0" width="803" height="500"/>'), 'inside_viewbox').passed, false);
@@ -62,7 +59,6 @@ test('path with relative commands is followed', () => {
   assert.equal(get(wrap('<path d="M 100 100 l 50 0 l 100 0 z"/>'), 'inside_viewbox').passed, true);
 });
 
-// ---------- title and labels ----------
 test('empty title fails; title nested inside a group does not count', () => {
   assert.equal(get(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><title>  </title>${labels}</svg>`, 'title_and_labels').passed, false);
   assert.equal(get(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><g><title>T</title></g>${labels}</svg>`, 'title_and_labels').passed, false);
@@ -76,7 +72,6 @@ test('text made of <tspan> counts as one label', () => {
   assert.equal(get(wrap('<text x="1" y="1"><tspan>a</tspan><tspan>b</tspan></text>'), 'title_and_labels').passed, false);
 });
 
-// ---------- animation ----------
 test('each SMIL element counts as animation', () => {
   for (const a of ['<animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="2s"/>', '<animateMotion dur="2s" path="M0 0 L5 5"/>', '<set attributeName="r" to="9" begin="1s"/>']) {
     assert.equal(get(wrap(`<circle cx="9" cy="9" r="3">${a}</circle>`), 'has_animation').passed, true);
@@ -89,7 +84,6 @@ test('css animation with @keyframes counts', () => {
   assert.equal(get(wrap('<style>@keyframes spin{to{opacity:0}} .a{animation: spin 2s infinite}</style>'), 'has_animation').passed, true);
 });
 
-// ---------- safe content ----------
 test('safety check catches each kind of unsafe thing', () => {
   const bads = [
     '<script>alert(1)</script>',
@@ -107,14 +101,12 @@ test('internal #id references are allowed', () => {
   assert.equal(get(wrap('<defs><g id="a"><rect width="5" height="5"/></g></defs><use href="#a"/>'), 'safe_content').passed, true);
 });
 
-// ---------- extractSvg ----------
 test('extractSvg handles chatter around the SVG and no SVG at all', () => {
   assert.equal(extractSvg('Sure! Here:\n<svg a="1"></svg>\nHope it helps'), '<svg a="1"></svg>');
   assert.equal(extractSvg('  no svg here  '), 'no svg here');
-  assert.equal(extractSvg('<svg a="1"><g>'), '<svg a="1"><g>'); // truncated reply is passed on so the parse check reports it
+  assert.equal(extractSvg('<svg a="1"><g>'), '<svg a="1"><g>');
 });
 
-// ---------- generate flow ----------
 const good = wrap(labels + anim);
 test('empty model reply: fails checks, retries once, no crash', async () => {
   let calls = 0;
@@ -138,14 +130,12 @@ test('apiRetries from both calls are summed', async () => {
   assert.equal(r.retries, 1);
 });
 
-// ---------- cost ----------
 test('cost estimate: zero tokens is zero, 1M tokens uses the per-million price', () => {
   assert.equal(estimateCostUsd(0, 0), 0);
   assert.ok(Math.abs(estimateCostUsd(0, 1_000_000) - 0.4) < 1e-9);
   assert.ok(Math.abs(estimateCostUsd(1_000_000, 0) - 0.1) < 1e-9);
 });
 
-// ---------- Gemini client (fetch is faked, no network) ----------
 async function withFetch(fn, body) {
   const realFetch = globalThis.fetch;
   const realKey = process.env.GEMINI_API_KEY;
@@ -174,7 +164,7 @@ test('429 gets a friendly rate-limit hint after 3 retries (2s+4s+8s wait)', { ti
   let calls = 0;
   await withFetch(async () => { calls++; return json(429, { error: { message: 'quota' } }); },
     () => assert.rejects(callGemini({ system: 's', prompt: 'p' }), /rate limit/));
-  assert.equal(calls, 4); // first try + 3 retries
+  assert.equal(calls, 4);
 });
 test('503 then success: returns text, tokens (thinking tokens counted) and apiRetries=1', { timeout: 10000 }, async () => {
   let calls = 0;

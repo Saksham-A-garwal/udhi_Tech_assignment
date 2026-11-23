@@ -1,4 +1,3 @@
-// Part A for ONE concept: ask the model, check the SVG, retry once if a check failed.
 import { callGemini, estimateCostUsd, MODEL } from './gemini.js';
 import { runChecks } from './checks.js';
 
@@ -29,11 +28,10 @@ ${previousSvg}
 Fix every problem and return the complete corrected SVG only.`;
 }
 
-// Pull the <svg>...</svg> out of the model reply (it may add fences or chatter).
 export function extractSvg(text) {
   const start = text.indexOf('<svg');
   const end = text.lastIndexOf('</svg>');
-  if (start === -1) return text.trim(); // let the parse check report it
+  if (start === -1) return text.trim();
   return end === -1 ? text.slice(start).trim() : text.slice(start, end + 6).trim();
 }
 
@@ -41,7 +39,7 @@ export async function generateDiagram(c, { call = callGemini } = {}) {
   let inputTokens = 0;
   let outputTokens = 0;
   let apiRetries = 0;
-  let retries = 0; // how many times we re-asked because a check failed
+  let retries = 0;
   let svg = '';
   let checks = [];
 

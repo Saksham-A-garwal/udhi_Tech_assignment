@@ -10,7 +10,6 @@ const app = express();
 
 app.use(express.static(path.join(here, 'public')));
 
-// Saved results: read from results.json. No AI call happens here.
 app.get('/api/results', (req, res) => {
   try {
     res.json(JSON.parse(fs.readFileSync(path.join(here, 'results.json'), 'utf8')));
@@ -19,8 +18,7 @@ app.get('/api/results', (req, res) => {
   }
 });
 
-// Generate button: run Part A live for one concept. The result is sent back, not saved to disk.
-let busy = false; // one live call at a time, so visitors cannot burn the free quota in parallel
+let busy = false;
 app.post('/api/generate/:id', async (req, res) => {
   const concept = CONCEPTS.find((c) => c.id === Number(req.params.id));
   if (!concept) return res.status(404).json({ error: 'Unknown concept id.' });

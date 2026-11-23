@@ -6,7 +6,7 @@ import { CONCEPTS } from '../src/concepts.js';
 const good = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><title>T</title>
 <circle cx="400" cy="250" r="50"><animate attributeName="r" values="40;60;40" dur="2s" repeatCount="indefinite"/></circle>
 <text x="50" y="50">a</text><text x="50" y="80">b</text><text x="50" y="110">c</text></svg>`;
-const bad = good.replace(/<animate[^>]*\/>/, ''); // no animation
+const bad = good.replace(/<animate[^>]*\/>/, '');
 
 const fake = (replies, prompts = []) => async ({ prompt }) => {
   prompts.push(prompt);
