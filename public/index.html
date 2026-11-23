@@ -5,50 +5,78 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Science Diagram Maker</title>
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --text:#1c2430; --muted:#667085; --line:#e3e6eb; --ok:#127a3d; --okbg:#e3f5ea; --bad:#b42318; --badbg:#fde8e6; --accent:#2f5bea; }
+  :root { --bg:#f4f6fb; --card:#fff; --text:#0f172a; --muted:#64748b; --line:#e2e8f0; --soft:#f8fafc;
+          --ok:#047857; --okbg:#d1fae5; --bad:#b91c1c; --badbg:#fee2e2; --accent:#4f46e5; --accent2:#4338ca;
+          --shadow:0 1px 2px rgba(15,23,42,.06),0 4px 16px rgba(15,23,42,.05); }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0b1020; --card:#131a2e; --text:#e5e9f5; --muted:#94a3b8; --line:#26304d; --soft:#0f1629;
+            --ok:#6ee7b7; --okbg:#064e3b; --bad:#fca5a5; --badbg:#5b1a1a; --accent:#6366f1; --accent2:#818cf8;
+            --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3); }
+  }
   * { box-sizing: border-box; }
-  body { margin:0; font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
-  header, main { max-width:1200px; margin:0 auto; padding:0 16px; }
-  header { padding-top:24px; }
-  h1 { margin:0 0 4px; font-size:24px; }
-  .sub { color:var(--muted); margin:0 0 16px; }
-  .wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:10px; }
-  table { border-collapse:collapse; width:100%; min-width:900px; }
-  th, td { padding:12px; border-bottom:1px solid var(--line); vertical-align:top; text-align:left; }
-  th { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); background:#fafbfc; }
+  body { margin:0; font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+  .hero { background:linear-gradient(135deg,#312e81,#4f46e5 60%,#0ea5e9); color:#fff; }
+  .inner { max-width:1280px; margin:0 auto; padding:0 20px; }
+  .hero .inner { padding-top:32px; padding-bottom:64px; }
+  .brand { font-size:12px; letter-spacing:.14em; text-transform:uppercase; opacity:.8; font-weight:600; }
+  h1 { margin:6px 0 8px; font-size:30px; letter-spacing:-.02em; }
+  .sub { margin:0; max-width:720px; opacity:.9; font-size:15px; }
+  main { margin-top:-40px; padding-bottom:40px; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow); }
+  .stat .v { font-size:24px; font-weight:700; letter-spacing:-.02em; }
+  .stat .l { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+  .wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); }
+  table { border-collapse:collapse; width:100%; min-width:1000px; }
+  th, td { padding:16px; border-bottom:1px solid var(--line); vertical-align:top; text-align:left; }
+  th { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); background:var(--soft); font-weight:700; }
   tr:last-child td { border-bottom:0; }
-  .diagram { width:340px; }
-  .diagram img { width:340px; height:212px; border:1px solid var(--line); border-radius:6px; background:#fff; display:block; }
-  .empty { width:340px; height:212px; display:grid; place-items:center; color:var(--muted); border:1px dashed var(--line); border-radius:6px; text-align:center; padding:8px; }
-  .name { font-weight:600; }
-  .small { color:var(--muted); font-size:13px; }
-  ul.checks { list-style:none; margin:0; padding:0; min-width:200px; }
-  ul.checks li { margin-bottom:4px; font-size:13px; }
-  .pill { display:inline-block; min-width:42px; text-align:center; padding:1px 8px; border-radius:99px; font-size:12px; font-weight:700; margin-right:6px; }
+  .num { width:36px; color:var(--muted); font-weight:700; }
+  .diagram { width:360px; }
+  .diagram img { width:360px; height:225px; border:1px solid var(--line); border-radius:10px; background:#fff; display:block; }
+  .empty { width:360px; height:225px; display:grid; place-items:center; color:var(--muted); border:1px dashed var(--line); border-radius:10px; text-align:center; padding:8px; }
+  .name { font-weight:700; font-size:15px; }
+  .tag { display:inline-block; margin-top:4px; padding:1px 9px; border-radius:99px; font-size:11px; font-weight:600; background:var(--soft); border:1px solid var(--line); color:var(--muted); }
+  .small { color:var(--muted); font-size:12.5px; }
+  ul.checks { list-style:none; margin:0; padding:0; min-width:210px; }
+  ul.checks li { margin-bottom:6px; font-size:13px; }
+  .pill { display:inline-block; min-width:44px; text-align:center; padding:1px 8px; border-radius:99px; font-size:11px; font-weight:700; margin-right:8px; letter-spacing:.03em; }
   .pill.pass { background:var(--okbg); color:var(--ok); }
   .pill.fail { background:var(--badbg); color:var(--bad); }
-  .msg { color:var(--muted); display:block; margin-left:0; font-size:12px; }
-  .review { min-width:230px; }
-  .btns { display:flex; gap:6px; margin-bottom:6px; }
-  button { font:inherit; border:1px solid var(--line); background:#fff; border-radius:6px; padding:5px 12px; cursor:pointer; }
-  button:hover { background:#f2f4f7; }
+  .msg { color:var(--muted); display:block; font-size:12px; margin-top:2px; }
+  .metric { display:flex; justify-content:space-between; gap:16px; padding:3px 0; font-size:13px; min-width:190px; }
+  .metric b { font-variant-numeric:tabular-nums; }
+  .review { min-width:240px; }
+  .btns { display:flex; gap:8px; margin-bottom:8px; }
+  button { font:inherit; font-weight:600; border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:8px; padding:6px 14px; cursor:pointer; transition:background .15s,border-color .15s; }
+  button:hover { background:var(--soft); }
+  button:focus-visible, textarea:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   button:disabled { opacity:.6; cursor:wait; }
+  button.approve, button.reject { flex:1; }
+  button.approve:hover { border-color:var(--ok); color:var(--ok); }
+  button.reject:hover { border-color:var(--bad); color:var(--bad); }
   button.approve.on { background:var(--ok); border-color:var(--ok); color:#fff; }
   button.reject.on { background:var(--bad); border-color:var(--bad); color:#fff; }
-  button.gen { background:var(--accent); border-color:var(--accent); color:#fff; margin-top:8px; }
-  button.gen:hover { background:#2449c0; }
-  textarea { width:100%; height:60px; font:inherit; font-size:13px; padding:6px; border:1px solid var(--line); border-radius:6px; resize:vertical; }
-  .status { font-size:12px; margin-top:4px; color:var(--muted); }
-  .error { margin-top:8px; padding:8px 10px; background:var(--badbg); color:var(--bad); border-radius:6px; font-size:13px; }
-  .live { font-size:12px; color:var(--accent); font-weight:600; }
+  button.gen { background:var(--accent); border-color:var(--accent); color:#fff; margin-top:12px; }
+  button.gen:hover { background:var(--accent2); }
+  textarea { width:100%; height:64px; font:inherit; font-size:13px; padding:8px; border:1px solid var(--line); border-radius:8px; resize:vertical; background:var(--card); color:var(--text); }
+  .status { font-size:12px; margin-top:6px; color:var(--muted); }
+  .status.approved { color:var(--ok); font-weight:600; }
+  .status.rejected { color:var(--bad); font-weight:600; }
+  .error { margin-top:10px; padding:8px 10px; background:var(--badbg); color:var(--bad); border-radius:8px; font-size:13px; }
+  .live { display:inline-block; margin-top:6px; font-size:11px; color:var(--accent2); font-weight:700; background:var(--soft); border:1px solid var(--line); padding:1px 8px; border-radius:99px; }
+  @media (max-width:700px) { .stats { grid-template-columns:repeat(2,1fr); } h1 { font-size:24px; } }
 </style>
 </head>
 <body>
-<header>
+<div class="hero"><div class="inner">
+  <div class="brand">Udhi Technologies · Review tool</div>
   <h1>Science Diagram Maker</h1>
-  <p class="sub">5 AI-made animated diagrams, checked by code. Review each one below. Your Approve/Reject choices and notes are saved in this browser.</p>
-</header>
-<main>
+  <p class="sub">Five AI-made animated science diagrams, each checked by code. Review them below. Approve/Reject choices and notes are saved in this browser.</p>
+</div></div>
+<main class="inner">
+  <div class="stats" id="stats"></div>
+  <div id="banner"></div>
   <div class="wrap">
     <table>
       <thead>
@@ -106,16 +134,16 @@ function rowHtml(c) {
         `<li><span class="pill ${k.passed ? 'pass' : 'fail'}">${k.passed ? 'PASS' : 'FAIL'}</span>${esc(CHECK_LABELS[k.name] || k.name)}${k.passed ? '' : `<span class="msg">${esc(k.message)}</span>`}</li>`).join('')}</ul>`
     : '<span class="small">—</span>';
   const cost = r
-    ? `<div><b>$${Number(r.costUsd).toFixed(5)}</b> est.</div>
-       <div>Retries: <b>${r.retries}</b></div>
-       <div class="small">API retries: ${r.apiRetries}</div>
-       <div class="small">Tokens in/out: ${r.inputTokens} / ${r.outputTokens}</div>
-       <div class="small">${esc(r.model)}</div>
-       ${live[c.id] ? '<div class="live">Live result (not saved to results.json)</div>' : ''}`
+    ? `<div class="metric"><span>Est. cost</span><b>$${Number(r.costUsd).toFixed(5)}</b></div>
+       <div class="metric"><span>Retries</span><b>${r.retries}</b></div>
+       <div class="metric small"><span>API retries</span><b>${r.apiRetries}</b></div>
+       <div class="metric small"><span>Tokens in / out</span><b>${r.inputTokens} / ${r.outputTokens}</b></div>
+       <div class="small" style="margin-top:6px">${esc(r.model)}</div>
+       ${live[c.id] ? '<span class="live">Live result · not saved</span>' : ''}`
     : '<span class="small">—</span>';
   return `
-    <td>${c.id}</td>
-    <td><div class="name">${esc(c.concept)}</div><div class="small">${esc(c.subject)}</div>
+    <td class="num">${c.id}</td>
+    <td><div class="name">${esc(c.concept)}</div><span class="tag">${esc(c.subject)}</span><br>
       <button class="gen" data-gen="${c.id}" ${busy[c.id] ? 'disabled' : ''}>${busy[c.id] ? 'Generating… (up to 1 min)' : 'Generate'}</button>
       ${errors[c.id] ? `<div class="error"><b>Could not generate:</b> ${esc(errors[c.id])}</div>` : ''}</td>
     <td class="diagram">${diagram}</td>
@@ -127,8 +155,21 @@ function rowHtml(c) {
         <button class="reject ${rev.decision === 'rejected' ? 'on' : ''}" data-decide="${c.id}:rejected">Reject</button>
       </div>
       <textarea data-note="${c.id}" placeholder="Note (saved automatically)">${esc(rev.note || '')}</textarea>
-      <div class="status" id="status-${c.id}">${rev.decision ? 'Saved: ' + rev.decision : 'Not reviewed yet'}</div>
+      <div class="status ${rev.decision || ''}" id="status-${c.id}">${rev.decision ? 'Saved: ' + rev.decision : 'Not reviewed yet'}</div>
     </td>`;
+}
+
+function renderStats() {
+  const rs = Object.values(results);
+  const revs = loadReviews();
+  const passed = rs.filter((r) => r.checks.every((k) => k.passed)).length;
+  const cost = rs.reduce((t, r) => t + Number(r.costUsd), 0);
+  const retries = rs.reduce((t, r) => t + r.retries, 0);
+  const reviewed = CONCEPTS.filter((c) => revs[c.id] && revs[c.id].decision).length;
+  const tile = (v, l) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  document.getElementById('stats').innerHTML =
+    tile(`${passed}/${CONCEPTS.length}`, 'Pass all checks') + tile('$' + cost.toFixed(4), 'Total est. cost') +
+    tile(retries, 'Check retries') + tile(`${reviewed}/${CONCEPTS.length}`, 'Reviewed');
 }
 
 function renderRow(id) {
@@ -136,6 +177,7 @@ function renderRow(id) {
   let tr = document.getElementById('row-' + id);
   if (!tr) { tr = document.createElement('tr'); tr.id = 'row-' + id; document.getElementById('rows').appendChild(tr); }
   tr.innerHTML = rowHtml(c);
+  renderStats();
 }
 
 async function load() {
@@ -145,7 +187,7 @@ async function load() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     for (const r of await res.json()) results[r.id] = r;
   } catch (e) {
-    document.querySelector('.sub').insertAdjacentHTML('afterend', `<div class="error">Could not load saved results: ${esc(e.message)}</div>`);
+    document.getElementById('banner').innerHTML = `<div class="error" style="margin:0 0 16px">Could not load saved results: ${esc(e.message)}</div>`;
   }
   CONCEPTS.forEach((c) => renderRow(c.id));
 }
