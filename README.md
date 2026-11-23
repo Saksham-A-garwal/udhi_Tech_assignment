@@ -11,7 +11,7 @@ npm install
 echo GEMINI_API_KEY=your_key > .env     # free key: aistudio.google.com/api-keys
 npm run generate                        # Part A: all 5 concepts -> results.json (optional; results.json is already committed)
 npm run dev                             # open http://localhost:3000
-npm test                                # unit tests for checks and retry logic
+npm test                                # 45 unit tests: checks, edge cases, retry flow, Gemini client with a faked fetch
 ```
 The key is only read from the environment (`.env` is git-ignored). Never put it in code.
 
