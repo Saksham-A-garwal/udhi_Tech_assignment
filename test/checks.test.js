@@ -58,3 +58,13 @@ test('scripts, handlers and external links fail the safety check', () => {
   assert.equal(status(good.replace('<circle', '<circle onclick="x()"')).safe_content, false);
   assert.equal(status(good.replace('<path', '<image href="https://evil.com/a.png"/><path')).safe_content, false);
 });
+
+test('viewBox check respects text-anchor from a CSS class', () => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><style>.t{text-anchor:middle;font-size:15px}</style><title>t</title><text class="t" x="400" y="50">${'a'.repeat(60)}</text></svg>`;
+  assert.equal(runChecks(svg).find((c) => c.name === 'inside_viewbox').passed, true);
+});
+
+test('viewBox check ignores start position of animateMotion elements', () => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><title>t</title><circle cx="0" cy="0" r="6"><animateMotion dur="2s" path="M100 100 L200 200"/></circle></svg>`;
+  assert.equal(runChecks(svg).find((c) => c.name === 'inside_viewbox').passed, true);
+});

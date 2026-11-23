@@ -112,19 +112,48 @@ function pathPoints(d) {
   return pts;
 }
 
+// Simple CSS support: read ".class { prop: value }" rules from <style> so that
+// font-size and text-anchor set by a class are respected (a browser would apply them).
+let cssClassRules = {};
+function readCssRules(root) {
+  cssClassRules = {};
+  walk(root, (n) => {
+    if (n.nodeType !== 1 || tagOf(n) !== 'style') return;
+    const css = (n.textContent || '').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+      for (const sel of m[1].split(',')) {
+        const cls = /^\s*(?:text)?\.([\w-]+)\s*$/.exec(sel);
+        if (cls) cssClassRules[cls[1]] = (cssClassRules[cls[1]] || '') + ';' + m[2];
+      }
+    }
+  });
+}
+
+// Look up a property on an element: attribute, inline style, then its CSS classes.
+function styleProp(n, prop) {
+  const a = n.getAttribute(prop);
+  if (a) return a.trim();
+  const re = new RegExp('(?:^|[;\\s])' + prop + '\\s*:\\s*([^;]+)');
+  const inline = re.exec(n.getAttribute('style') || '');
+  if (inline) return inline[1].trim();
+  for (const c of (n.getAttribute('class') || '').split(/\s+/)) {
+    const m = c && cssClassRules[c] ? re.exec(cssClassRules[c]) : null;
+    if (m) return m[1].trim();
+  }
+  return null;
+}
+
 function fontSizeOf(el) {
   for (let n = el; n && n.nodeType === 1; n = n.parentNode) {
-    const a = parseFloat(n.getAttribute('font-size'));
-    if (Number.isFinite(a)) return a;
-    const s = /font-size\s*:\s*([\d.]+)/.exec(n.getAttribute('style') || '');
-    if (s) return parseFloat(s[1]);
+    const v = parseFloat(styleProp(n, 'font-size'));
+    if (Number.isFinite(v)) return v;
   }
   return 16;
 }
 
 function anchorOf(el) {
   for (let n = el; n && n.nodeType === 1; n = n.parentNode) {
-    const a = n.getAttribute('text-anchor');
+    const a = styleProp(n, 'text-anchor');
     if (a) return a;
   }
   return 'start';
@@ -173,12 +202,14 @@ function elementPoints(el, tag) {
 export function checkViewBox(root) {
   const vb = getViewBox(root);
   if (!vb) return { passed: false, message: 'The root <svg> has no valid viewBox (needs "minX minY width height").' };
+  readCssRules(root);
   const problems = [];
   let skipped = 0;
 
   const visit = (el, t) => {
     const tag = tagOf(el);
     if (SKIP_TAGS.has(tag)) return;
+    if (elementChildren(el).some((c) => tagOf(c) === 'animateMotion')) { skipped++; return; } // position comes from the motion path
     const nt = composeTransform(t, el.getAttribute('transform'));
     if (nt === null) { skipped++; return; } // unsupported transform: cannot verify this subtree
     for (const [px, py] of elementPoints(el, tag)) {
