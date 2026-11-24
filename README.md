@@ -1,6 +1,6 @@
 # Science Diagram Maker
 
-Live app: **<ADD LINK AFTER DEPLOY>**
+Live app: **https://udhi-tech-assignment.onrender.com/**
 
 Model: `gemini-3.5-flash-lite` (free tier).
 
