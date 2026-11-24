@@ -194,7 +194,7 @@ document.addEventListener('click', (e) => {
     if (!ok) document.getElementById('status-' + id).textContent = 'Could not save (browser storage is blocked).';
   }
 });
-document.addEventListener('change', (e) => {
+document.addEventListener('input', (e) => {
   const n = e.target.closest('[data-note]');
   if (!n) return;
   saveReview(n.dataset.note, { note: n.value });
